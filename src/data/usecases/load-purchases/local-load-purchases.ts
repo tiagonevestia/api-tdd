@@ -1,5 +1,4 @@
-import { CacheStore } from "@/data/protocols/cache";
-import { PurchaseModel } from "@/domain/models";
+import { CachePolicy, CacheStore } from "@/data/protocols/cache";
 import { LoadPurchases, SavePurchases } from "@/domain/usecases";
 
 export class LocalLoadPurchases implements SavePurchases, LoadPurchases {
@@ -11,9 +10,10 @@ export class LocalLoadPurchases implements SavePurchases, LoadPurchases {
   async loadAll(): Promise<Array<LoadPurchases.Request>> {
     try {
       const cache = this.cacheStore.fetch(this.key);
-      return cache.value;
-    } catch (error) {
-      this.cacheStore.delete(this.key);
+      return CachePolicy.validade(cache.timestamp, this.currentDate)
+        ? cache.value
+        : [];
+    } catch (e) {
       return [];
     }
   }
@@ -22,5 +22,15 @@ export class LocalLoadPurchases implements SavePurchases, LoadPurchases {
       timestamp: this.currentDate,
       value: purchases,
     });
+  }
+  validade(): void {
+    try {
+      const cache = this.cacheStore.fetch(this.key);
+      if (!CachePolicy.validade(cache.timestamp, this.currentDate)) {
+        throw new Error();
+      }
+    } catch (error) {
+      this.cacheStore.delete(this.key);
+    }
   }
 }
